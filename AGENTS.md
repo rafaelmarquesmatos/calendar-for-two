@@ -81,8 +81,9 @@ npx shadcn add button card dialog
 
 ## Roadmap (front-end)
 
-- [ ] Calendário mensal com eventos do casal
-- [ ] Criação/edição de eventos (dialog + formulário)
+- [x] Calendário mensal com eventos do casal
+- [x] Criação/edição de eventos (dialog + formulário)
+- [x] Persistência local (localStorage — `lib/events-store.ts`; trocar por API quando houver backend)
 - [ ] Lembretes e notificações
 - [ ] Autenticação e vínculo do casal (quando houver backend)
 - [ ] Perfil do casal (datas importantes: aniversários, etc.)

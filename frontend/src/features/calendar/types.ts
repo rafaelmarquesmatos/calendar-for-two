@@ -1,16 +1,11 @@
 /**
- * Tipos de domínio da feature calendar.
+ * Tipos de domínio da feature calendar — eventos do casal.
+ * Ocupações pessoais/rotinas vivem na feature `activities`.
  */
 
 import type { EventCategory } from "@/lib/categories"
 
 export type { EventCategory }
-
-/**
- * - shared: plano do casal — o parceiro pode aceitar.
- * - personal: ocupação pessoal (ex.: trabalho) — só o dono, sem aceite.
- */
-export type EventType = "shared" | "personal"
 
 export type RepeatRule = "none" | "weekly"
 
@@ -25,14 +20,12 @@ export interface CalendarEvent {
   /** Hora de término opcional no formato HH:mm. */
   endTime?: string
   category: EventCategory
-  /** shared = plano do casal | personal = ocupação pessoal. */
-  type: EventType
-  /** Quem criou / é dono do evento (id do membro). */
+  /** Quem marcou o evento (id do membro). */
   authorId: string
-  /** Aceite do parceiro (apenas para eventos shared). */
+  /** Aceite do parceiro. */
   accepted?: boolean
   acceptedAt?: string
-  /** Recorrência semanal (ex.: trabalho toda segunda). */
+  /** Recorrência semanal (ex.: jantar toda sexta). */
   repeat: RepeatRule
   createdAt: string
 }

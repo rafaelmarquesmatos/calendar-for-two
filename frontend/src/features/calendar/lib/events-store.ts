@@ -2,19 +2,23 @@ import type { CalendarEvent } from "../types"
 
 const STORAGE_KEY = "calendar-for-two:events"
 
+/** Formato legado (pré-separação): eventos podiam ser "personal". */
+type LegacyEvent = CalendarEvent & { type?: "shared" | "personal" }
+
 /**
- * Persistência local dos eventos.
- * Sem backend ainda — os dados vivem no localStorage do navegador.
- * Quando o backend existir, esta camada é substituída por chamadas de API
- * mantendo a mesma assinatura (lib/events-store -> lib/api).
+ * Persistência local dos eventos do casal.
+ * Sem backend ainda — localStorage. Quando o backend existir, esta camada é
+ * substituída por chamadas de API mantendo a mesma assinatura.
  */
 export function loadEvents(fallbackAuthorId?: string): CalendarEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
-    const parsed = JSON.parse(raw) as CalendarEvent[]
+    const parsed = JSON.parse(raw) as LegacyEvent[]
     return Array.isArray(parsed)
-      ? parsed.map((e) => normalizeEvent(e, fallbackAuthorId))
+      ? parsed
+          .filter((event) => event.type !== "personal")
+          .map(({ type: _type, ...rest }) => normalizeEvent(rest, fallbackAuthorId))
       : []
   } catch {
     return []
@@ -23,7 +27,7 @@ export function loadEvents(fallbackAuthorId?: string): CalendarEvent[] {
 
 /**
  * Normaliza eventos salvos por versões antigas do app
- * (campos novos: type, authorId, repeat; accepted opcional).
+ * (campos novos: repeat; authorId opcional).
  */
 function normalizeEvent(
   event: CalendarEvent,
@@ -31,7 +35,6 @@ function normalizeEvent(
 ): CalendarEvent {
   return {
     ...event,
-    type: event.type ?? "shared",
     repeat: event.repeat ?? "none",
     authorId: event.authorId ?? fallbackAuthorId ?? "unknown",
   }

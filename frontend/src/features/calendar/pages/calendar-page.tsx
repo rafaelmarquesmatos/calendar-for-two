@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { addMonths, isSameMonth, startOfMonth } from "date-fns"
 import { CalendarHeart, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,23 +14,39 @@ import {
 import { MemberAvatar } from "@/features/couple/components/member-avatar"
 import { SetupScreen } from "@/features/couple/components/setup-screen"
 import { useMembers } from "@/features/couple/hooks/use-members"
+import { ActivityDialog } from "@/features/activities/components/activity-dialog"
+import { useActivities } from "@/features/activities/hooks/use-activities"
+import { migratePersonalEvents } from "@/features/activities/lib/activities-store"
+import { expandActivitiesForMonth } from "@/features/activities/lib/activity-utils"
 import { EventDialog } from "../components/event-dialog"
 import { EventList } from "../components/event-list"
 import { MonthGrid } from "../components/month-grid"
 import { useEvents } from "../hooks/use-events"
 import { expandEventsForMonth } from "../lib/calendar-utils"
+import type { Activity, ActivityInput } from "@/features/activities/types"
 import type { CalendarEvent, EventInput } from "../types"
 
 export function CalendarPage() {
   const { members, activeMember, setup, switchActiveMember } = useMembers()
+
+  // Migração única: eventos "personal" de versões antigas viram atividades.
+  // Roda antes do useActivities, que inicializa com o resultado.
+  const migratedActivities = useMemo(() => migratePersonalEvents(), [])
+
   const { events, addEvent, updateEvent, deleteEvent, toggleAccept } =
     useEvents(activeMember?.id)
+  const { activities, addActivity, updateActivity, deleteActivity } =
+    useActivities(migratedActivities)
 
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(() => new Date())
-  const [dialogOpen, setDialogOpen] = useState(false)
+
+  const [eventDialogOpen, setEventDialogOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
-  const [dialogDate, setDialogDate] = useState(() => new Date())
+  const [eventDialogDate, setEventDialogDate] = useState(() => new Date())
+
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false)
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
 
   // Primeira execução: apresentar o casal
   if (!activeMember || members.length < 2) {
@@ -38,25 +54,27 @@ export function CalendarPage() {
   }
 
   const instances = expandEventsForMonth(events, currentMonth)
+  const activityInstances = expandActivitiesForMonth(activities, currentMonth)
 
+  // --- Eventos ---
   const openNewEvent = (date: Date) => {
     setEditingEvent(null)
-    setDialogDate(date)
-    setDialogOpen(true)
+    setEventDialogDate(date)
+    setEventDialogOpen(true)
   }
 
   const openEditEvent = (event: CalendarEvent, date: Date) => {
     setEditingEvent(event)
-    setDialogDate(date)
-    setDialogOpen(true)
+    setEventDialogDate(date)
+    setEventDialogOpen(true)
   }
 
-  const closeDialog = () => {
-    setDialogOpen(false)
+  const closeEventDialog = () => {
+    setEventDialogOpen(false)
     setEditingEvent(null)
   }
 
-  const handleSave = (input: EventInput) => {
+  const handleSaveEvent = (input: EventInput) => {
     if (editingEvent) {
       updateEvent(editingEvent.id, input)
     } else {
@@ -70,11 +88,41 @@ export function CalendarPage() {
     }
   }
 
-  const handleDelete = (id: string) => {
+  const handleDeleteEvent = (id: string) => {
     deleteEvent(id)
-    closeDialog()
+    closeEventDialog()
   }
 
+  // --- Atividades ---
+  const openNewActivity = () => {
+    setEditingActivity(null)
+    setActivityDialogOpen(true)
+  }
+
+  const openEditActivity = (activity: Activity) => {
+    setEditingActivity(activity)
+    setActivityDialogOpen(true)
+  }
+
+  const closeActivityDialog = () => {
+    setActivityDialogOpen(false)
+    setEditingActivity(null)
+  }
+
+  const handleSaveActivity = (input: ActivityInput) => {
+    if (editingActivity) {
+      updateActivity(editingActivity.id, input)
+    } else {
+      addActivity(input)
+    }
+  }
+
+  const handleDeleteActivity = (id: string) => {
+    deleteActivity(id)
+    closeActivityDialog()
+  }
+
+  // --- Navegação ---
   const handleNavigate = (direction: -1 | 1) => {
     setCurrentMonth((month) => addMonths(month, direction))
   }
@@ -137,12 +185,14 @@ export function CalendarPage() {
               currentMonth={currentMonth}
               selectedDate={selectedDate}
               instances={instances}
+              activityInstances={activityInstances}
               members={members}
               onSelectDate={setSelectedDate}
               onNavigate={handleNavigate}
               onGoToToday={handleGoToToday}
               onNewEvent={openNewEvent}
               onEditEvent={openEditEvent}
+              onEditActivity={openEditActivity}
             />
           </CardContent>
         </Card>
@@ -151,25 +201,39 @@ export function CalendarPage() {
           <EventList
             selectedDate={selectedDate}
             instances={instances}
+            activityInstances={activityInstances}
             events={events}
+            activities={activities}
             members={members}
             activeMember={activeMember}
             onNewEvent={openNewEvent}
             onEditEvent={openEditEvent}
+            onNewActivity={openNewActivity}
+            onEditActivity={openEditActivity}
             onToggleAccept={toggleAccept}
           />
         </aside>
       </div>
 
       <EventDialog
-        open={dialogOpen}
+        open={eventDialogOpen}
         editingEvent={editingEvent}
-        initialDate={dialogDate}
+        initialDate={eventDialogDate}
         members={members}
         activeMember={activeMember}
-        onClose={closeDialog}
-        onSave={handleSave}
-        onDelete={handleDelete}
+        onClose={closeEventDialog}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+      />
+
+      <ActivityDialog
+        open={activityDialogOpen}
+        editingActivity={editingActivity}
+        members={members}
+        activeMember={activeMember}
+        onClose={closeActivityDialog}
+        onSave={handleSaveActivity}
+        onDelete={handleDeleteActivity}
       />
     </main>
   )

@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MemberAvatar } from "@/features/couple/components/member-avatar"
+import { dayActivities } from "@/features/activities/lib/activity-utils"
 import { CATEGORIES } from "@/lib/categories"
 import {
   WEEKDAYS_SHORT,
@@ -26,33 +27,39 @@ import {
   toDateKey,
 } from "../lib/calendar-utils"
 import type { Member } from "@/features/couple/types"
+import type { DayActivity } from "@/features/activities/types"
 import type { CalendarEvent, DayEvent } from "../types"
 
-const MAX_VISIBLE_EVENTS = 2
+const MAX_VISIBLE_ITEMS = 2
 
 interface MonthGridProps {
   currentMonth: Date
   selectedDate: Date
-  /** Ocorrências expandidas do mês (inclui recorrentes semanais). */
+  /** Ocorrências expandidas de eventos do mês (inclui recorrentes). */
   instances: DayEvent[]
+  /** Ocorrências expandidas de atividades do mês. */
+  activityInstances: DayActivity[]
   members: Member[]
   onSelectDate: (date: Date) => void
   onNavigate: (direction: -1 | 1) => void
   onGoToToday: () => void
   onNewEvent: (date: Date) => void
   onEditEvent: (event: CalendarEvent, date: Date) => void
+  onEditActivity: (activity: DayActivity) => void
 }
 
 export function MonthGrid({
   currentMonth,
   selectedDate,
   instances,
+  activityInstances,
   members,
   onSelectDate,
   onNavigate,
   onGoToToday,
   onNewEvent,
   onEditEvent,
+  onEditActivity,
 }: MonthGridProps) {
   const days = getMonthGrid(currentMonth)
 
@@ -98,9 +105,13 @@ export function MonthGrid({
       {/* Grid de dias */}
       <div className="grid grid-cols-7 gap-px">
         {days.map((day) => {
-          const dayEvents = dayInstances(instances, day)
-          const visible = dayEvents.slice(0, MAX_VISIBLE_EVENTS)
-          const hiddenCount = dayEvents.length - visible.length
+          const eventsOfDay = dayInstances(instances, day)
+          const activitiesOfDay = dayActivities(activityInstances, day)
+          const merged = [...eventsOfDay, ...activitiesOfDay].sort((a, b) =>
+            (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"),
+          )
+          const visible = merged.slice(0, MAX_VISIBLE_ITEMS)
+          const hiddenCount = merged.length - visible.length
           const inMonth = isSameMonth(day, currentMonth)
           const selected = isSameDay(day, selectedDate)
           const today = isToday(day)
@@ -150,16 +161,25 @@ export function MonthGrid({
               </div>
 
               <div className="flex flex-col gap-0.5">
-                {visible.map((instance) => (
-                  <EventChip
-                    key={instance.instanceKey}
-                    instance={instance}
-                    author={members.find((m) => m.id === instance.authorId)}
-                    onOpen={() =>
-                      onEditEvent(instance, fromKey(instance.instanceDate))
-                    }
-                  />
-                ))}
+                {visible.map((item) =>
+                  "ownerId" in item ? (
+                    <ActivityChip
+                      key={item.instanceKey}
+                      activity={item}
+                      owner={members.find((m) => m.id === item.ownerId)}
+                      onOpen={() => onEditActivity(item)}
+                    />
+                  ) : (
+                    <EventChip
+                      key={item.instanceKey}
+                      event={item}
+                      author={members.find((m) => m.id === item.authorId)}
+                      onOpen={() =>
+                        onEditEvent(item, fromKey(item.instanceDate))
+                      }
+                    />
+                  ),
+                )}
                 {hiddenCount > 0 && (
                   <span className="px-1 text-[11px] text-muted-foreground">
                     +{hiddenCount} mais
@@ -180,57 +200,45 @@ function fromKey(key: string): Date {
 }
 
 interface EventChipProps {
-  instance: DayEvent
+  event: DayEvent
   author?: Member
   onOpen: () => void
 }
 
-/** Chip de evento dentro de uma célula do grid. */
-function EventChip({ instance, author, onOpen }: EventChipProps) {
-  const isPersonal = instance.type === "personal"
-  const accepted = instance.accepted
-
+/** Chip de evento do casal dentro de uma célula do grid. */
+function EventChip({ event, author, onOpen }: EventChipProps) {
   return (
     <button
       onClick={(e) => {
         e.stopPropagation()
         onOpen()
       }}
-      title={`${instance.title}${author ? ` · ${author.name}` : ""}`}
-      className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight transition-colors hover:brightness-95 ${
-        isPersonal ? "border border-dashed border-border" : ""
-      }`}
+      title={`${event.title}${author ? ` · ${author.name}` : ""}`}
+      className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight transition-colors hover:brightness-95"
       style={{
-        backgroundColor: isPersonal
-          ? "repeating-linear-gradient(45deg, color-mix(in oklab, var(--muted) 55%, transparent) 0 3px, transparent 3px 6px)"
-          : "color-mix(in oklab, var(--primary) 8%, transparent)",
+        backgroundColor:
+          "color-mix(in oklab, var(--primary) 8%, transparent)",
       }}
     >
-      {isPersonal ? (
-        <span className="shrink-0 text-foreground/50" aria-hidden>
-          <PersonalIcon category={instance.category} />
-        </span>
-      ) : (
-        <span
-          className={`size-1.5 shrink-0 rounded-full ${CATEGORIES[instance.category].dot}`}
-        />
-      )}
+      <span
+        className={`size-1.5 shrink-0 rounded-full ${CATEGORIES[event.category].dot}`}
+      />
       <span className="truncate font-medium text-foreground/90">
-        {instance.title}
+        {event.title}
       </span>
-      {instance.startTime && (
+      {event.startTime && (
         <span className="shrink-0 tabular-nums text-foreground/60">
-          {formatTime(instance.startTime)}
+          {formatTime(event.startTime)}
         </span>
       )}
-      {instance.repeat === "weekly" && (
-        <Repeat className="size-2.5 shrink-0 text-foreground/40" aria-label="Semanal" />
-      )}
-      {accepted && (
-        <Check
-          className="size-3 shrink-0 text-emerald-500"
-          aria-label="Aceito"
+      {event.repeat === "weekly" && (
+        <Repeat
+          className="size-2.5 shrink-0 text-foreground/40"
+          aria-label="Semanal"
         />
+      )}
+      {event.accepted && (
+        <Check className="size-3 shrink-0 text-emerald-500" aria-label="Aceito" />
       )}
       {author && (
         <span className="ml-auto shrink-0">
@@ -241,7 +249,48 @@ function EventChip({ instance, author, onOpen }: EventChipProps) {
   )
 }
 
-function PersonalIcon({ category }: { category: string }) {
+interface ActivityChipProps {
+  activity: DayActivity
+  owner?: Member
+  onOpen: () => void
+}
+
+/** Chip de atividade/ocupação dentro de uma célula do grid (listrado). */
+function ActivityChip({ activity, owner, onOpen }: ActivityChipProps) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onOpen()
+      }}
+      title={`${activity.title}${owner ? ` · ${owner.name}` : ""}`}
+      className="flex items-center gap-1 truncate rounded border border-dashed border-border px-1 py-0.5 text-left text-[11px] leading-tight transition-colors hover:brightness-95"
+      style={{
+        backgroundColor:
+          "repeating-linear-gradient(45deg, color-mix(in oklab, var(--muted) 55%, transparent) 0 3px, transparent 3px 6px)",
+      }}
+    >
+      <span className="shrink-0 text-foreground/50" aria-hidden>
+        <ActivityIcon category={activity.category} />
+      </span>
+      <span className="truncate font-medium text-foreground/90">
+        {activity.title}
+      </span>
+      {activity.startTime && (
+        <span className="shrink-0 tabular-nums text-foreground/60">
+          {formatTime(activity.startTime)}
+        </span>
+      )}
+      {owner && (
+        <span className="ml-auto shrink-0">
+          <MemberAvatar member={owner} className="size-3.5 text-[7px]" />
+        </span>
+      )}
+    </button>
+  )
+}
+
+function ActivityIcon({ category }: { category: string }) {
   const icons: Record<string, React.ComponentType<{ className?: string }>> = {
     romance: Heart,
     aniversario: Cake,

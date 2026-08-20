@@ -27,10 +27,12 @@ Quando surgir, ficará em `backend/` (monorepo).
 │       │   ├── ui/            # componentes shadcn/ui (GERADOS — não editar à mão)
 │       │   └── shared/        # componentes próprios reutilizáveis
 │       ├── features/          # módulos por funcionalidade (feature-based)
-│       │   ├── calendar/      #   components/ hooks/ lib/ pages/ types
+│       │   ├── activities/    #   rotinas pessoais de ocupação (grade semanal)
+│       │   ├── calendar/      #   eventos do casal (components/ hooks/ lib/ pages/ types)
+│       │   ├── couple/        #   membros/perfis locais do casal
 │       │   └── landing/
 │       ├── hooks/             # hooks globais (fora de feature)
-│       ├── lib/               # utils genéricos (cn, futuramente api client)
+│       ├── lib/               # utils genéricos (cn, categories, futuramente api client)
 │       ├── types/             # tipos globais compartilhados
 │       ├── main.tsx           # entrada (providers + router)
 │       └── index.css          # tokens de tema (Tailwind v4 + shadcn)
@@ -85,7 +87,8 @@ npx shadcn add button card dialog
 - [x] Criação/edição de eventos (dialog + formulário)
 - [x] Identificação de autor (quem marcou) e perfis locais do casal (feature `couple`)
 - [x] Aceite de eventos pelo parceiro (com seletor "visualizando como" para simular os dois lados)
-- [x] Eventos pessoais de ocupação (ex.: trabalho) com recorrência semanal
+- [x] **Separação Eventos × Atividades**: eventos = planos do casal (com aceite); atividades (feature `activities/`) = rotinas de ocupação por dias da semana, sem aceite
+- [x] Eventos com recorrência semanal
 - [x] Persistência local (localStorage — `lib/events-store.ts`; trocar por API quando houver backend)
 - [ ] Lembretes e notificações
 - [ ] Autenticação e vínculo do casal (quando houver backend)

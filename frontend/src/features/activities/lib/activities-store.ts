@@ -54,7 +54,9 @@ export function migratePersonalEvents(): Activity[] {
     return []
   }
 
-  const events = JSON.parse(raw) as CalendarEvent[]
+  const events = JSON.parse(raw) as Array<
+    CalendarEvent & { type?: "shared" | "personal" }
+  >
   const personal = events.filter((event) => event.type === "personal")
   const activities: Activity[] = personal.map((event) => ({
     id: event.id,

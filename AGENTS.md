@@ -83,6 +83,9 @@ npx shadcn add button card dialog
 
 - [x] Calendário mensal com eventos do casal
 - [x] Criação/edição de eventos (dialog + formulário)
+- [x] Identificação de autor (quem marcou) e perfis locais do casal (feature `couple`)
+- [x] Aceite de eventos pelo parceiro (com seletor "visualizando como" para simular os dois lados)
+- [x] Eventos pessoais de ocupação (ex.: trabalho) com recorrência semanal
 - [x] Persistência local (localStorage — `lib/events-store.ts`; trocar por API quando houver backend)
 - [ ] Lembretes e notificações
 - [ ] Autenticação e vínculo do casal (quando houver backend)

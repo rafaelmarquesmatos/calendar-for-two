@@ -6,9 +6,13 @@ import { sortByDate } from "../lib/calendar-utils"
 /**
  * Estado global (por enquanto local ao hook) dos eventos do casal,
  * com persistência automática em localStorage.
+ *
+ * @param fallbackAuthorId autor atribuído a eventos antigos sem authorId.
  */
-export function useEvents() {
-  const [events, setEvents] = useState<CalendarEvent[]>(() => loadEvents())
+export function useEvents(fallbackAuthorId?: string) {
+  const [events, setEvents] = useState<CalendarEvent[]>(() =>
+    loadEvents(fallbackAuthorId),
+  )
 
   useEffect(() => {
     saveEvents(events)
@@ -39,5 +43,20 @@ export function useEvents() {
     setEvents((prev) => prev.filter((event) => event.id !== id))
   }, [])
 
-  return { events, addEvent, updateEvent, deleteEvent }
+  /** Aceita (ou desfaz aceite) de um evento compartilhado. */
+  const toggleAccept = useCallback((id: string): void => {
+    setEvents((prev) =>
+      prev.map((event) =>
+        event.id === id
+          ? {
+              ...event,
+              accepted: !event.accepted,
+              acceptedAt: event.accepted ? undefined : new Date().toISOString(),
+            }
+          : event,
+      ),
+    )
+  }, [])
+
+  return { events, addEvent, updateEvent, deleteEvent, toggleAccept }
 }

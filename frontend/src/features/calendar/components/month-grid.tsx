@@ -1,9 +1,22 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import {
+  Cake,
+  CalendarClock,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  Heart,
+  HeartPulse,
+  Plane,
+  Plus,
+  Repeat,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MemberAvatar } from "@/features/couple/components/member-avatar"
 import { CATEGORIES } from "../lib/categories"
 import {
   WEEKDAYS_SHORT,
-  eventsForDay,
+  dayInstances,
   formatMonthYear,
   formatTime,
   getMonthGrid,
@@ -12,25 +25,29 @@ import {
   isToday,
   toDateKey,
 } from "../lib/calendar-utils"
-import type { CalendarEvent } from "../types"
+import type { Member } from "@/features/couple/types"
+import type { CalendarEvent, DayEvent } from "../types"
 
 const MAX_VISIBLE_EVENTS = 2
 
 interface MonthGridProps {
   currentMonth: Date
   selectedDate: Date
-  events: CalendarEvent[]
+  /** Ocorrências expandidas do mês (inclui recorrentes semanais). */
+  instances: DayEvent[]
+  members: Member[]
   onSelectDate: (date: Date) => void
   onNavigate: (direction: -1 | 1) => void
   onGoToToday: () => void
   onNewEvent: (date: Date) => void
-  onEditEvent: (event: CalendarEvent) => void
+  onEditEvent: (event: CalendarEvent, date: Date) => void
 }
 
 export function MonthGrid({
   currentMonth,
   selectedDate,
-  events,
+  instances,
+  members,
   onSelectDate,
   onNavigate,
   onGoToToday,
@@ -81,7 +98,7 @@ export function MonthGrid({
       {/* Grid de dias */}
       <div className="grid grid-cols-7 gap-px">
         {days.map((day) => {
-          const dayEvents = eventsForDay(events, day)
+          const dayEvents = dayInstances(instances, day)
           const visible = dayEvents.slice(0, MAX_VISIBLE_EVENTS)
           const hiddenCount = dayEvents.length - visible.length
           const inMonth = isSameMonth(day, currentMonth)
@@ -133,28 +150,15 @@ export function MonthGrid({
               </div>
 
               <div className="flex flex-col gap-0.5">
-                {visible.map((event) => (
-                  <button
-                    key={event.id}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onEditEvent(event)
-                    }}
-                    className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight hover:brightness-95"
-                    style={{ backgroundColor: "color-mix(in oklab, var(--primary) 8%, transparent)" }}
-                  >
-                    <span
-                      className={`size-1.5 shrink-0 rounded-full ${CATEGORIES[event.category].dot}`}
-                    />
-                    <span className="truncate font-medium text-foreground/90">
-                      {event.title}
-                    </span>
-                    {event.startTime && (
-                      <span className="shrink-0 tabular-nums text-foreground/60">
-                        {formatTime(event.startTime)}
-                      </span>
-                    )}
-                  </button>
+                {visible.map((instance) => (
+                  <EventChip
+                    key={instance.instanceKey}
+                    instance={instance}
+                    author={members.find((m) => m.id === instance.authorId)}
+                    onOpen={() =>
+                      onEditEvent(instance, fromKey(instance.instanceDate))
+                    }
+                  />
                 ))}
                 {hiddenCount > 0 && (
                   <span className="px-1 text-[11px] text-muted-foreground">
@@ -168,4 +172,84 @@ export function MonthGrid({
       </div>
     </div>
   )
+}
+
+function fromKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
+
+interface EventChipProps {
+  instance: DayEvent
+  author?: Member
+  onOpen: () => void
+}
+
+/** Chip de evento dentro de uma célula do grid. */
+function EventChip({ instance, author, onOpen }: EventChipProps) {
+  const isPersonal = instance.type === "personal"
+  const accepted = instance.accepted
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onOpen()
+      }}
+      title={`${instance.title}${author ? ` · ${author.name}` : ""}`}
+      className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight transition-colors hover:brightness-95 ${
+        isPersonal ? "border border-dashed border-border" : ""
+      }`}
+      style={{
+        backgroundColor: isPersonal
+          ? "repeating-linear-gradient(45deg, color-mix(in oklab, var(--muted) 55%, transparent) 0 3px, transparent 3px 6px)"
+          : "color-mix(in oklab, var(--primary) 8%, transparent)",
+      }}
+    >
+      {isPersonal ? (
+        <span className="shrink-0 text-foreground/50" aria-hidden>
+          <PersonalIcon category={instance.category} />
+        </span>
+      ) : (
+        <span
+          className={`size-1.5 shrink-0 rounded-full ${CATEGORIES[instance.category].dot}`}
+        />
+      )}
+      <span className="truncate font-medium text-foreground/90">
+        {instance.title}
+      </span>
+      {instance.startTime && (
+        <span className="shrink-0 tabular-nums text-foreground/60">
+          {formatTime(instance.startTime)}
+        </span>
+      )}
+      {instance.repeat === "weekly" && (
+        <Repeat className="size-2.5 shrink-0 text-foreground/40" aria-label="Semanal" />
+      )}
+      {accepted && (
+        <Check
+          className="size-3 shrink-0 text-emerald-500"
+          aria-label="Aceito"
+        />
+      )}
+      {author && (
+        <span className="ml-auto shrink-0">
+          <MemberAvatar member={author} className="size-3.5 text-[7px]" />
+        </span>
+      )}
+    </button>
+  )
+}
+
+function PersonalIcon({ category }: { category: string }) {
+  const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+    romance: Heart,
+    aniversario: Cake,
+    viagem: Plane,
+    compromisso: CalendarClock,
+    saude: HeartPulse,
+    outro: CircleDot,
+  }
+  const Icon = icons[category] ?? CircleDot
+  return <Icon className="size-2.5 shrink-0" />
 }

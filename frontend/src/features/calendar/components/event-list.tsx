@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { MemberAvatar } from "@/features/couple/components/member-avatar"
-import { CATEGORIES } from "../lib/categories"
+import { CATEGORIES } from "@/lib/categories"
 import {
   dayInstances,
   formatDayHeader,

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { MemberAvatar } from "@/features/couple/components/member-avatar"
-import { CATEGORIES, CATEGORY_ORDER } from "../lib/categories"
+import { CATEGORIES, CATEGORY_ORDER } from "@/lib/categories"
 import { toDateKey } from "../lib/calendar-utils"
 import type { Member } from "@/features/couple/types"
 import type {

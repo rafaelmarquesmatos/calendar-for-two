@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MemberAvatar } from "@/features/couple/components/member-avatar"
-import { CATEGORIES } from "../lib/categories"
+import { CATEGORIES } from "@/lib/categories"
 import {
   WEEKDAYS_SHORT,
   dayInstances,

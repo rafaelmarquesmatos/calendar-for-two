@@ -1,7 +1,17 @@
-import type { EventCategory } from "../types"
+/**
+ * Categorias visuais compartilhadas entre eventos e atividades.
+ */
+
+export type EventCategory =
+  | "romance"
+  | "aniversario"
+  | "viagem"
+  | "compromisso"
+  | "saude"
+  | "outro"
 
 /**
- * Metadados visuais das categorias de eventos.
+ * Metadados visuais das categorias.
  * Classes Tailwind fixas (com variantes dark) — não usar classes dinâmicas.
  */
 export const CATEGORIES: Record<

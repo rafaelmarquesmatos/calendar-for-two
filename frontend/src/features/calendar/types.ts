@@ -2,13 +2,9 @@
  * Tipos de domínio da feature calendar.
  */
 
-export type EventCategory =
-  | "romance"
-  | "aniversario"
-  | "viagem"
-  | "compromisso"
-  | "saude"
-  | "outro"
+import type { EventCategory } from "@/lib/categories"
+
+export type { EventCategory }
 
 /**
  * - shared: plano do casal — o parceiro pode aceitar.
